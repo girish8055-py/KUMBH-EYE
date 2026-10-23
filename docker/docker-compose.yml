@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  surveillance:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../data/videos:/app/data/videos:ro
+      - ../data/database:/app/data/database
+      - ../ml_service/models:/app/ml_service/models
+    env_file:
+      - path: ../.env
+        required: false
+    restart: unless-stopped

@@ -1,0 +1,52 @@
+# Byte-compiled / optimized / DLL files
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs/Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Local databases
+data/database/history.db
+*.db
+*.sqlite3
+*.sqlite3-journal
+
+# Large files & media
+videos/
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# Large ML/DL model weight files
+*.pth
+*.onnx
+*.bin
+*.pkl
+
+# Environment files
+.env
+.env.*
+!.env.example

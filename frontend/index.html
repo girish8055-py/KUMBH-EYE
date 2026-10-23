@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SmartVision — Surveillance Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="static/css/dashboard.css"/>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">👁</div>
+    <div>
+      <div class="logo-text">Kumbheye</div>
+      <div class="logo-sub">SURVEILLANCE AI</div>
+    </div>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab-btn crowd active"     onclick="switchTab('crowd',this)">🫂 Crowd</button>
+    <button class="tab-btn vehicle"          onclick="switchTab('vehicle',this)">🚗 Vehicle</button>
+    <button class="tab-btn parking"          onclick="switchTab('parking',this)">🅿 Parking</button>
+    <button class="tab-btn user"             onclick="switchTab('user',this)">👤 Public Portal</button>
+    <button class="tab-btn authority"        onclick="switchTab('authority',this)">🏛 Authority <span class="badge-count" id="complaint-badge" style="display:none">0</span></button>
+    <button class="tab-btn" onclick="switchTab('livestream', this)">📡 Live Stream</button>
+    <button class="tab-btn" onclick="switchTab('history', this)">📋 History</button>
+  </nav>
+
+  <div class="hdr-right">
+    <div class="pal-strip" title="Change theme">
+      <div class="ps active" data-theme=""      style="background:#05080f;box-shadow:inset 0 0 0 2px #22d3a0" title="Dark (default)"></div>
+      <div class="ps"        data-theme="serene" style="background:#81A6C6;box-shadow:inset 0 0 0 2px #EDE8DC" title="Serene Blue"></div>
+      <div class="ps"        data-theme="navy"   style="background:#060d1c;box-shadow:inset 0 0 0 2px #60a5fa" title="Deep Navy"></div>
+      <div class="ps"        data-theme="carbon" style="background:#0e1016;box-shadow:inset 0 0 0 2px #a78bfa" title="Carbon"></div>
+      <div class="ps"        data-theme="forest" style="background:#070f0a;box-shadow:inset 0 0 0 2px #4ade80" title="Forest"></div>
+    </div>
+    <div class="bell-wrap">
+      <div class="bell-btn" id="bellBtn" onclick="toggleBell()">🔔<div class="bell-badge" id="bellBadge">0</div></div>
+      <div class="alert-dd" id="alertDD">
+        <div class="add-hdr">
+          <span class="add-title">🚨 System Alerts</span>
+          <span class="add-clear" onclick="clearAlerts()">Clear All</span>
+        </div>
+        <div class="add-list" id="alertList"><div class="add-empty">All systems normal ✓</div></div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <div class="conn-dot" id="connDot"></div>
+      <span class="conn-txt" id="connTxt">Connecting…</span>
+    </div>
+    <div class="time-disp" id="timeClock"></div>
+  </div>
+</header>
+
+<main>
+
+<section class="section active" id="section-crowd">
+  <div class="welcome-banner"><h2>Welcome to KumbhEye Dashboard</h2><p>AI-powered crowd detection, vehicle monitoring, parking analytics, and live surveillance.</p></div>
+  <div class="sh">
+    <div>
+      <div class="sh-title" style="color:var(--crowd)">Crowd Detection <span>/ Surveillance</span></div>
+      <div class="sh-sub">2 cameras · YOLO inference · frame sampled every 4 s</div>
+    </div>
+  </div>
+
+  <div class="ai-banner" id="aib-crowd">
+    <div class="ai-banner-icon">🧠</div>
+    <div class="ai-banner-body">
+      <div class="ai-banner-label">Live AI Summary</div>
+      <div class="ai-banner-text" id="aibt-crowd">Waiting for detection data…</div>
+      <div class="ai-banner-action" id="aiba-crowd"></div>
+    </div>
+  </div>
+
+  <div class="summ-bar">
+    <div class="summ-card" style="--acc:var(--crowd);--ibg:var(--crowd-dim)"><div class="summ-icon">👥</div><div><div class="summ-lbl">Total People</div><div class="summ-val loading" id="s-crowd-tot" style="--vc:var(--crowd)">—</div><div class="summ-trend">both cameras</div></div></div>
+    <div class="summ-card" style="--acc:#60a5fa;--ibg:rgba(96,165,250,.12)"><div class="summ-icon">📊</div><div><div class="summ-lbl">Area Density</div><div class="summ-val loading" id="s-crowd-den" style="--vc:#60a5fa">—</div><div class="summ-trend">per 10k px²</div></div></div>
+    <div class="summ-card" style="--acc:var(--green);--ibg:rgba(74,222,128,.12)"><div class="summ-icon">🎯</div><div><div class="summ-lbl">AI Accuracy</div><div class="summ-val loading" id="s-crowd-conf" style="--vc:var(--green)">—</div><div class="summ-trend">confidence score</div></div></div>
+    <div class="summ-card" style="--acc:var(--amber);--ibg:rgba(251,146,60,.12)"><div class="summ-icon">⚠</div><div><div class="summ-lbl">Safety Level</div><div class="summ-val" id="s-crowd-alert" style="--vc:var(--green);font-size:13px;padding-top:4px">Safe</div><div class="summ-trend">crowd threshold</div></div></div>
+  </div>
+
+  <div class="cam-grid">
+    <div class="cam-card crowd">
+      <div class="ctop"><div class="ctop-l"><div class="live-badge"><div class="live-dot"></div>LIVE</div><div class="ctop-name">Area Camera 1</div><div class="ctop-id">CAM-C01</div></div></div>
+      <div class="v-wrap">
+        <video id="vid-crowd_1" autoplay muted loop playsinline onerror="noVid('crowd_1')"><source src="http://localhost:8000/videos/crowd_1.mp4" type="video/mp4"/></video>
+        <div class="v-ov"></div>
+        <div class="ov-tl"><div class="ov-b" id="ol-lvl-crowd_1">—</div></div>
+        <div class="ov-tr"><div class="ov-b" id="ol-res-crowd_1">—</div></div>
+        <div class="ov-bl"><div><div class="ov-cnt" id="ol-cnt-crowd_1">—</div><div class="ov-clbl">PEOPLE</div></div><div class="ov-ts" id="ol-ts-crowd_1">—</div></div>
+        <div class="novid" id="novid-crowd_1"><div class="novid-icon">🎥</div><div class="novid-txt">Place <code>crowd_1.mp4</code><br/>in /videos</div></div>
+      </div>
+      <div class="stats-row">
+        <div class="sr-cell"><div class="sr-lbl">People Count <span class="sr-tip" title="Total persons detected by AI">ℹ</span></div><div class="sr-val loading" id="sr-crowd_1-cnt" style="--sv:var(--crowd)">—</div><div class="sr-sub">in frame</div><div class="sr-prog"><div class="sr-prog-f" id="pb-crowd_1-cnt" style="--pb:var(--crowd)"></div></div></div>
+        <div class="sr-cell"><div class="sr-lbl">Area Density</div><div class="sr-val loading" id="sr-crowd_1-den" style="--sv:#60a5fa">—</div><div class="sr-sub">per 10k px²</div><div class="sr-prog"><div class="sr-prog-f" id="pb-crowd_1-den" style="--pb:#60a5fa"></div></div></div>
+        <div class="sr-cell"><div class="sr-lbl">AI Accuracy</div><div class="sr-val loading" id="sr-crowd_1-conf" style="--sv:var(--green)">—</div><div class="sr-sub" id="ss-crowd_1-mm">min / max</div><div class="sr-prog"><div class="sr-prog-f" id="pb-crowd_1-conf" style="--pb:var(--green)"></div></div></div>
+        <div class="sr-cell"><div class="sr-lbl">Crowd Level</div><div id="sr-crowd_1-lvl" style="margin-top:5px">—</div><div class="sr-sub" id="ss-crowd_1-ts" style="margin-top:7px">—</div></div>
+      </div>
+      <div class="act-row">
+        <button class="act-btn an" onclick="showAnalytics('crowd_1')">📈 Analytics</button>
+        <button class="act-btn hm" onclick="openHeatmap('crowd_1')">🌡 Heatmap</button>
+        <button class="act-btn rp" onclick="openReport('crowd_1')">📄 Report</button>
+      </div>
+    </div>
+    <div class="cam-card crowd">
+      <div class="ctop"><div class="ctop-l"><div class="live-badge"><div class="live-dot"></div>LIVE</div><div class="ctop-name">Area Camera 2</div><div class="ctop-id">CAM-C02</div></div></div>
+      <div class="v-wrap">
+        <video id="vid-crowd_2" autoplay muted loop playsinline onerror="noVid('crowd_2')"><source src="http://localhost:8000/videos/crowd_2.mp4" type="video/mp4"/></video>
+        <div class="v-ov"></div>
+        <div class="ov-tl"><div class="ov-b" id="ol-lvl-crowd_2">—</div></div>
+        <div class="ov-tr"><div class="ov-b" id="ol-res-crowd_2">—</div></div>
+        <div class="ov-bl"><div><div class="ov-cnt" id="ol-cnt-crowd_2">—</div><div class="ov-clbl">PEOPLE</div></div><div class="ov-ts" id="ol-ts-crowd_2">—</div></div>
+        <div class="novid" id="novid-crowd_2"><div class="novid-icon">🎥</div><div class="novid-txt">Place <code>crowd_2.mp4</code><br/>in /videos</div></div>
+      </div>
+      <div class="stats-row">
+        <div class="sr-cell"><div class="sr-lbl">People Count</div><div class="sr-val loading" id="sr-crowd_2-cnt" style="--sv:var(--crowd)">—</div><div class="sr-sub">in frame</div><div class="sr-prog"><div class="sr-prog-f" id="pb-crowd_2-cnt" style="--pb:var(--crowd)"></div></div></div>
+        <div class="sr-cell"><div class="sr-lbl">Area Density</div><div class="sr-val loading" id="sr-crowd_2-den" style="--sv:#60a5fa">—</div><div class="sr-sub">per 10k px²</div><div class="sr-prog"><div class="sr-prog-f" id="pb-crowd_2-den" style="--pb:#60a5fa"></div></div></div>
+        <div class="sr-cell"><div class="sr-lbl">AI Accuracy</div><div class="sr-val loading" id="sr-crowd_2-conf" style="--sv:var(--green)">—</div><div class="sr-sub" id="ss-crowd_2-mm">min / max</div><div class="sr-prog"><div class="sr-prog-f" id="pb-crowd_2-conf" style="--pb:var(--green)"></div></div></div>
+        <div class="sr-cell"><div class="sr-lbl">Crowd Level</div><div id="sr-crowd_2-lvl" style="margin-top:5px">—</div><div class="sr-sub" id="ss-crowd_2-ts" style="margin-top:7px">—</div></div>
+      </div>
+      <div class="act-row">
+        <button class="act-btn an" onclick="showAnalytics('crowd_2')">📈 Analytics</button>
+        <button class="act-btn hm" onclick="openHeatmap('crowd_2')">🌡 Heatmap</button>
+        <button class="act-btn rp" onclick="openReport('crowd_2')">📄 Report</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="section-vehicle">
+  <div class="sh"><div><div class="sh-title" style="color:var(--veh)">Vehicle Detection <span>/ Surveillance</span></div><div class="sh-sub">2 cameras · YOLO inference · frame sampled every 4 s</div></div></div>
+  <div class="ai-banner" id="aib-vehicle"><div class="ai-banner-icon">🧠</div><div class="ai-banner-body"><div class="ai-banner-label">Live AI Summary</div><div class="ai-banner-text" id="aibt-vehicle">Waiting…</div><div class="ai-banner-action" id="aiba-vehicle"></div></div></div>
+  <div class="summ-bar">
+    <div class="summ-card" style="--acc:var(--veh);--ibg:var(--veh-dim)"><div class="summ-icon">🚗</div><div><div class="summ-lbl">Total Vehicles</div><div class="summ-val loading" id="s-veh-tot" style="--vc:var(--veh)">—</div><div class="summ-trend">both cameras</div></div></div>
+    <div class="summ-card" style="--acc:#60a5fa;--ibg:rgba(96,165,250,.12)"><div class="summ-icon">📊</div><div><div class="summ-lbl">Road Density</div><div class="summ-val loading" id="s-veh-den" style="--vc:#60a5fa">—</div><div class="summ-trend">per 10k px²</div></div></div>
+    <div class="summ-card" style="--acc:var(--green);--ibg:rgba(74,222,128,.12)"><div class="summ-icon">🎯</div><div><div class="summ-lbl">AI Accuracy</div><div class="summ-val loading" id="s-veh-conf" style="--vc:var(--green)">—</div><div class="summ-trend">confidence</div></div></div>
+    <div class="summ-card" style="--acc:var(--amber);--ibg:rgba(251,146,60,.12)"><div class="summ-icon">🚦</div><div><div class="summ-lbl">Traffic Status</div><div class="summ-val" id="s-veh-traf" style="--vc:var(--green);font-size:13px;padding-top:4px">Clear</div><div class="summ-trend">both cameras</div></div></div>
+  </div>
+  <div class="cam-grid">
+    <div class="cam-card vehicle">
+      <div class="ctop"><div class="ctop-l"><div class="live-badge"><div class="live-dot"></div>LIVE</div><div class="ctop-name">Traffic Camera 1</div><div class="ctop-id">CAM-V01</div></div></div>
+      <div class="v-wrap">
+        <video id="vid-vehicle_1" autoplay muted loop playsinline onerror="noVid('vehicle_1')"><source src="http://localhost:8000/videos/vehicle_1.mp4" type="video/mp4"/></video>
+        <div class="v-ov"></div>
+        <div class="ov-bl"><div><div class="ov-cnt" id="ol-cnt-vehicle_1">—</div><div class="ov-clbl">VEHICLES</div></div><div class="ov-ts" id="ol-ts-vehicle_1">—</div></div>
+        <div class="novid" id="novid-vehicle_1"><div class="novid-icon">🎥</div><div class="novid-txt">Place <code>vehicle_1.mp4</code> in /videos</div></div>
+      </div>
+      <div class="stats-row">
+        <div class="sr-cell"><div class="sr-lbl">Vehicle Count</div><div class="sr-val loading" id="sr-vehicle_1-tot" style="--sv:var(--veh)">—</div><div class="sr-sub">in frame</div><div class="sr-prog"><div class="sr-prog-f" id="pb-vehicle_1-tot" style="--pb:var(--veh)"></div></div></div>
+        <div class="sr-cell"><div class="sr-lbl">Road Density</div><div class="sr-val loading" id="sr-vehicle_1-den" style="--sv:#60a5fa">—</div><div class="sr-sub">per 10k px²</div><div class="sr-prog"><div class="sr-prog-f" id="pb-vehicle_1-den" style="--pb:#60a5fa"></div></div></div>
+        <div class="sr-cell"><div class="sr-lbl">AI Accuracy</div><div class="sr-val loading" id="sr-vehicle_1-conf" style="--sv:var(--green)">—</div><div class="sr-sub">confidence</div><div class="sr-prog"><div class="sr-prog-f" id="pb-vehicle_1-conf" style="--pb:var(--green)"></div></div></div>
+        <div class="sr-cell"><div class="sr-lbl">Vehicle Types</div><div class="sr-val" id="sr-vehicle_1-cls" style="font-size:9px;line-height:1.7;color:var(--t2)">—</div><div class="sr-sub" id="ss-vehicle_1-ts">—</div></div>
+      </div>
+      <div class="act-row">
+        <button class="act-btn an" onclick="showAnalytics('vehicle_1')">📈 Analytics</button>
+        <button class="act-btn hm" onclick="openHeatmap('vehicle_1')">🌡 Heatmap</button>
+        <button class="act-btn rp" onclick="openReport('vehicle_1')">📄 Report</button>
+      </div>
+    </div>
+    <div class="cam-card vehicle">
+      <div class="ctop"><div class="ctop-l"><div class="live-badge"><div class="live-dot"></div>LIVE</div><div class="ctop-name">Traffic Camera 2</div><div class="ctop-id">CAM-V02</div></div></div>
+      <div class="v-wrap">
+        <video id="vid-vehicle_2" autoplay muted loop playsinline onerror="noVid('vehicle_2')"><source id="src-vehicle_2" src="http://localhost:8000/videos/vehicle_2.mp4" type="video/mp4"/></video>
+        <div class="v-ov"></div>
+        <div class="ov-bl"><div><div class="ov-cnt" id="ol-cnt-vehicle_2">—</div><div class="ov-clbl">VEHICLES</div></div><div class="ov-ts" id="ol-ts-vehicle_2">—</div></div>
+        <div class="novid" id="novid-vehicle_2"><div class="novid-icon">🎥</div><div class="novid-txt">Place <code>vehicle_2.mp4</code> in /videos</div></div>
+      </div>
+      <div class="stats-row">
+        <div class="sr-cell"><div class="sr-lbl">Vehicle Count</div><div class="sr-val loading" id="sr-vehicle_2-tot" style="--sv:var(--veh)">—</div><div class="sr-sub">in frame</div><div class="sr-prog"><div class="sr-prog-f" id="pb-vehicle_2-tot" style="--pb:var(--veh)"></div></div></div>
+        <div class="sr-cell"><div class="sr-lbl">Road Density</div><div class="sr-val loading" id="sr-vehicle_2-den" style="--sv:#60a5fa">—</div><div class="sr-sub">per 10k px²</div><div class="sr-prog"><div class="sr-prog-f" id="pb-vehicle_2-den" style="--pb:#60a5fa"></div></div></div>
+        <div class="sr-cell"><div class="sr-lbl">AI Accuracy</div><div class="sr-val loading" id="sr-vehicle_2-conf" style="--sv:var(--green)">—</div><div class="sr-sub">confidence</div><div class="sr-prog"><div class="sr-prog-f" id="pb-vehicle_2-conf" style="--pb:var(--green)"></div></div></div>
+        <div class="sr-cell"><div class="sr-lbl">Vehicle Types</div><div class="sr-val" id="sr-vehicle_2-cls" style="font-size:9px;line-height:1.7;color:var(--t2)">—</div><div class="sr-sub" id="ss-vehicle_2-ts">—</div></div>
+      </div>
+      <div class="act-row">
+        <button class="act-btn an" onclick="showAnalytics('vehicle_2')">📈 Analytics</button>
+        <button class="act-btn hm" onclick="openHeatmap('vehicle_2')">🌡 Heatmap</button>
+        <button class="act-btn rp" onclick="openReport('vehicle_2')">📄 Report</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="section-parking">
+  <div class="sh"><div><div class="sh-title" style="color:var(--park)">Parking Lot <span>/ Slot Detection</span></div><div class="sh-sub">1 camera · YOLO slot detection · frame sampled every 4 s</div></div></div>
+  <div class="ai-banner" id="aib-parking"><div class="ai-banner-icon">🧠</div><div class="ai-banner-body"><div class="ai-banner-label">Live AI Summary</div><div class="ai-banner-text" id="aibt-parking">Waiting…</div><div class="ai-banner-action" id="aiba-parking"></div></div></div>
+  <div class="summ-bar">
+    <div class="summ-card" style="--acc:var(--park);--ibg:var(--park-dim)"><div class="summ-icon">🅿</div><div><div class="summ-lbl">Total Spots</div><div class="summ-val loading" id="s-park-tot" style="--vc:var(--park)">—</div><div class="summ-trend">total capacity</div></div></div>
+    <div class="summ-card" style="--acc:var(--red);--ibg:rgba(248,113,113,.12)"><div class="summ-icon">🚫</div><div><div class="summ-lbl">Taken</div><div class="summ-val loading" id="s-park-occ" style="--vc:var(--red)">—</div><div class="summ-trend">occupied spots</div></div></div>
+    <div class="summ-card" style="--acc:var(--green);--ibg:rgba(74,222,128,.12)"><div class="summ-icon">✅</div><div><div class="summ-lbl">Free Spots</div><div class="summ-val loading" id="s-park-avail" style="--vc:var(--green)">—</div><div class="summ-trend">available now</div></div></div>
+    <div class="summ-card" style="--acc:var(--amber);--ibg:rgba(251,146,60,.12)"><div class="summ-icon">📉</div><div><div class="summ-lbl">Lot Filled</div><div class="summ-val loading" id="s-park-rate" style="--vc:var(--amber)">—</div><div class="summ-trend">% occupied</div></div></div>
+  </div>
+  <div class="cam-grid single">
+    <div class="cam-card parking">
+      <div class="ctop"><div class="ctop-l"><div class="live-badge"><div class="live-dot"></div>LIVE</div><div class="ctop-name">Parking Lot Overview</div><div class="ctop-id">CAM-P01</div></div></div>
+      <div class="v-wrap">
+        <video id="vid-parking_1" autoplay muted loop playsinline onerror="noVid('parking_1')"><source src="http://localhost:8000/videos/new_p.mp4" type="video/mp4"/></video>
+        <div class="v-ov"></div>
+        <div class="ov-tr"><div class="ov-b" id="ol-pk-status">—</div></div>
+        <div class="ov-bl"><div><div class="ov-cnt" id="ol-pk-avail" style="color:var(--green)">—</div><div class="ov-clbl" style="color:rgba(74,222,128,.5)">FREE SPOTS</div></div><div class="ov-ts" id="ol-ts-parking_1">—</div></div>
+        <div class="novid" id="novid-parking_1"><div class="novid-icon">🎥</div><div class="novid-txt">Place <code>new_p.mp4</code> in /videos</div></div>
+      </div>
+      <div class="pk-panel">
+        <div class="pk-list">
+          <div class="pk-row"><div class="pk-dot o"></div><div class="pk-lbl">Occupied Spots</div><div class="pk-val r" id="pk-occ">—</div></div>
+          <div class="pk-bar"><div class="pk-bar-f r" id="pkb-occ" style="width:0%"></div></div>
+          <div class="pk-row"><div class="pk-dot a"></div><div class="pk-lbl">Free Spots</div><div class="pk-val g" id="pk-avail">—</div></div>
+          <div class="pk-bar"><div class="pk-bar-f g" id="pkb-avail" style="width:0%"></div></div>
+          <div class="pk-row"><div class="pk-dot t"></div><div class="pk-lbl">Total Capacity</div><div class="pk-val v" id="pk-total">—</div></div>
+        </div>
+        <div class="ring-col">
+          <div class="ring-wrap"><canvas id="parkRing"></canvas><div class="ring-ctr"><div class="ring-rate" id="ring-rate">—%</div><div class="ring-sub">filled</div></div></div>
+          <div class="park-tag ok" id="park-tag">—</div>
+        </div>
+      </div>
+      <div class="slot-map">
+        <div class="slot-map-hdr">
+          <div class="slot-map-lbl">Parking Spot Map</div>
+          <div class="slot-legend"><div class="leg-i"><div class="leg-sw o"></div>Taken</div><div class="leg-i"><div class="leg-sw a"></div>Free</div></div>
+        </div>
+        <div class="slot-grid" id="slotGrid"><div class="slot-wait"><div class="spin" style="border-top-color:var(--park)"></div>Loading…</div></div>
+      </div>
+      <div class="act-row">
+        <button class="act-btn" style="color:var(--park)" onclick="showAnalytics('parking_1')">📈 Analytics</button>
+        <button class="act-btn hm" onclick="openHeatmap('parking_1')">🌡 Heatmap</button>
+        <button class="act-btn rp" onclick="openReport('parking_1')">📄 Report</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="section-livestream">
+  <div class="sh">
+    <div>
+      <div class="sh-title" style="color:#6c5ce7">Live <em>Stream</em></div>
+      <div class="sh-sub">RTSP feed · ByteTrack · Real-time detection from edge device</div>
+    </div>
+  </div>
+  <iframe src="http://localhost:5000" style="width:100%;height:calc(100vh - 140px);border:none;border-radius:12px;background:#f4f7ff" allow="autoplay" title="KumbhEye Live Stream"></iframe>
+</section>
+
+<section class="section" id="section-user">
+  <div class="sh">
+    <div>
+      <div class="sh-title" style="color:var(--user)">Public Portal <span>/ Community</span></div>
+      <div class="sh-sub">View live alerts · Submit a complaint · Report a concern</div>
+    </div>
+  </div>
+  <div class="portal-grid">
+    <div class="portal-card">
+      <div class="portal-card-hdr">
+        <div class="portal-card-hdr-icon" style="background:var(--crowd-dim)">🚨</div>
+        <div>
+          <div class="portal-card-title">Live System Alerts</div>
+          <div class="portal-card-sub">Real-time alerts from all cameras</div>
+        </div>
+      </div>
+      <div class="portal-body">
+        <div class="alert-feed" id="globalAlertFeed">
+          <div class="af-empty">No alerts yet — all systems normal ✓</div>
+        </div>
+      </div>
+    </div>
+    <div class="portal-card">
+      <div class="portal-card-hdr">
+        <div class="portal-card-hdr-icon" style="background:var(--user-dim)">📝</div>
+        <div>
+          <div class="portal-card-title">Submit a Complaint</div>
+          <div class="portal-card-sub">Report a security concern to authorities</div>
+        </div>
+      </div>
+      <div class="portal-body">
+        <div class="form-row">
+          <label class="form-lbl">Your Name *</label>
+          <input id="cf-name" class="form-input" type="text" placeholder="Full name" required/>
+        </div>
+        <div class="form-row">
+          <label class="form-lbl">Phone Number</label>
+          <input id="cf-phone" class="form-input" type="tel" placeholder="Optional contact number"/>
+        </div>
+        <div class="form-row">
+          <label class="form-lbl">Location *</label>
+          <input id="cf-location" class="form-input" type="text" placeholder="Where did this happen? (gate, parking, etc.)"/>
+        </div>
+        <div class="form-row">
+          <label class="form-lbl">Category *</label>
+          <select id="cf-category" class="form-select">
+            <option value="">Select category…</option>
+            <option>Overcrowding / Safety Risk</option>
+            <option>Suspicious Activity</option>
+            <option>Traffic / Parking Violation</option>
+            <option>Infrastructure Issue</option>
+            <option>Medical Emergency</option>
+            <option>Theft / Security Breach</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label class="form-lbl">Description *</label>
+          <textarea id="cf-desc" class="form-textarea" placeholder="Describe the issue in detail…"></textarea>
+        </div>
+        <div class="form-row">
+          <label class="form-lbl">Photo Evidence</label>
+          <div class="photo-upload-wrap" id="photoWrap" onclick="document.getElementById('cf-photo').click()">
+            <input type="file" id="cf-photo" accept="image/*" style="display:none" onchange="handlePhoto(this)"/>
+            <div class="photo-upload-label">📷 Click to upload or take a photo</div>
+            <img id="photoPreview" class="photo-preview" alt="Preview"/>
+          </div>
+        </div>
+        <button class="form-btn submit" onclick="submitComplaint()">📤 Submit to Authorities</button>
+        <div id="cf-feedback" style="margin-top:10px;font-size:11px;font-family:var(--fm);color:var(--t3)"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="section-authority">
+  <div class="sh">
+    <div>
+      <div class="sh-title" style="color:var(--auth)">Authority View <span>/ Complaint Management</span></div>
+      <div class="sh-sub">Review and manage public complaints · Update status · View evidence</div>
+    </div>
+    <div>
+      <button class="pill" onclick="loadComplaints()" style="color:var(--auth)">🔄 Refresh</button>
+    </div>
+  </div>
+  <div class="summ-bar" style="margin-bottom:18px">
+    <div class="summ-card" style="--acc:var(--auth);--ibg:var(--auth-dim)"><div class="summ-icon">📋</div><div><div class="summ-lbl">Total Complaints</div><div class="summ-val" id="auth-total" style="--vc:var(--auth)">0</div><div class="summ-trend">all time</div></div></div>
+    <div class="summ-card" style="--acc:var(--red);--ibg:rgba(248,113,113,.12)"><div class="summ-icon">🔴</div><div><div class="summ-lbl">Open</div><div class="summ-val" id="auth-open" style="--vc:var(--red)">0</div><div class="summ-trend">needs action</div></div></div>
+    <div class="summ-card" style="--acc:var(--amber);--ibg:rgba(251,146,60,.12)"><div class="summ-icon">🟡</div><div><div class="summ-lbl">In Progress</div><div class="summ-val" id="auth-inprog" style="--vc:var(--amber)">0</div><div class="summ-trend">being handled</div></div></div>
+    <div class="summ-card" style="--acc:var(--green);--ibg:rgba(74,222,128,.12)"><div class="summ-icon">✅</div><div><div class="summ-lbl">Resolved</div><div class="summ-val" id="auth-resolved" style="--vc:var(--green)">0</div><div class="summ-trend">closed</div></div></div>
+  </div>
+  <div class="cc-filter-bar">
+    <button class="cc-filter active" data-filter="all" onclick="filterComplaints('all',this)">All</button>
+    <button class="cc-filter" data-filter="Open" onclick="filterComplaints('Open',this)">Open</button>
+    <button class="cc-filter" data-filter="In Progress" onclick="filterComplaints('In Progress',this)">In Progress</button>
+    <button class="cc-filter" data-filter="Resolved" onclick="filterComplaints('Resolved',this)">Resolved</button>
+  </div>
+  <div class="complaints-list" id="complaintsList">
+    <div class="af-empty" style="text-align:center;padding:30px">No complaints submitted yet.</div>
+  </div>
+</section>
+
+<section class="section" id="section-history">
+  <div class="sh">
+    <div>
+      <div class="sh-title" style="color:var(--primary)">Detection <span>/ History</span></div>
+      <div class="sh-sub">Full database log — crowd · vehicle · parking · alerts · complaints</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="pill" id="hist-export-btn" onclick="exportCSV()" style="color:var(--green)">⬇ Export CSV</button>
+    </div>
+  </div>
+  <div style="display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap">
+    <button class="cc-filter active" data-ht="crowd"     onclick="loadHistory('crowd',this)">🫂 Crowd</button>
+    <button class="cc-filter"        data-ht="vehicle"   onclick="loadHistory('vehicle',this)">🚗 Vehicle</button>
+    <button class="cc-filter"        data-ht="parking"   onclick="loadHistory('parking',this)">🅿 Parking</button>
+    <button class="cc-filter"        data-ht="alerts"    onclick="loadHistory('alerts',this)">🚨 Alerts</button>
+    <button class="cc-filter"        data-ht="complaints" onclick="loadHistory('complaints',this)">📝 Complaints</button>
+  </div>
+  <div class="summ-bar" id="hist-stats" style="margin-bottom:18px"></div>
+  <div style="background:#ffffff;border:1px solid var(--bdr);border-radius:14px;overflow:hidden;box-shadow:0 2px 16px rgba(108,92,231,.07)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:var(--card2);border-bottom:1px solid var(--bdr)">
+      <div style="font-size:12px;font-weight:600;color:var(--t1)" id="hist-table-title">Crowd Detection History</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input id="hist-search" type="text" placeholder="Search…" style="padding:5px 10px;border:1px solid var(--bdr2);border-radius:6px;font-size:11px;color:var(--t1);background:var(--card);outline:none;width:160px" oninput="filterHistTable()"/>
+        <span style="font-size:10px;color:var(--t3)" id="hist-count">0 records</span>
+      </div>
+    </div>
+    <div style="overflow-x:auto;max-height:60vh;overflow-y:auto">
+      <table id="hist-table" style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead id="hist-thead" style="position:sticky;top:0;background:var(--card2);z-index:1"></thead>
+        <tbody id="hist-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<div class="modal" id="analyticsModal">
+  <div class="mpanel">
+    <div class="mhdr">
+      <div class="mhdr-l"><div class="mhdr-ic" style="background:var(--crowd-dim)">📈</div><div><div class="mtitle" id="m-anly-title">Analytics</div><div class="msub">Historical detection trends</div></div></div>
+      <button class="mclose" onclick="closeModal('analyticsModal')">✕</button>
+    </div>
+    <div class="mbody"><div id="charts-cont"><div class="mloading"><div class="spin"></div>Loading…</div></div></div>
+  </div>
+</div>
+
+<div class="modal" id="heatmapModal">
+  <div class="mpanel sm">
+    <div class="mhdr">
+      <div class="mhdr-l"><div class="mhdr-ic" style="background:var(--veh-dim)">🌡</div><div><div class="mtitle">Heatmap & Movement Trail</div><div class="msub">Green = start · Red = latest · Lines = path over time</div></div></div>
+      <button class="mclose" onclick="closeModal('heatmapModal')">✕</button>
+    </div>
+    <div class="mbody" id="hm-body"><div class="mloading"><div class="spin" style="border-top-color:var(--veh)"></div>Generating…</div></div>
+  </div>
+</div>
+
+<div class="modal" id="reportModal">
+  <div class="mpanel">
+    <div class="mhdr">
+      <div class="mhdr-l"><div class="mhdr-ic" style="background:var(--park-dim)">📄</div><div><div class="mtitle" id="m-rpt-title">Surveillance Report</div><div class="msub">Open in new tab → Ctrl+P to save as PDF</div></div></div>
+      <button class="mclose" onclick="closeModal('reportModal')">✕</button>
+    </div>
+    <div class="mbody" id="rpt-body"><div class="mloading"><div class="spin" style="border-top-color:var(--park)"></div>Building report…</div></div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="this.classList.remove('open')">
+  <img id="lbImg" src="" alt="Evidence photo"/>
+</div>
+
+<div id="toasts"></div>
+
+<script src="static/js/utils.js"></script>
+<script src="static/js/alerts.js"></script>
+<script src="static/js/app.js"></script>
+</body>
+</html>
